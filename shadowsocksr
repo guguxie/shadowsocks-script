@@ -1,0 +1,81 @@
+#!/bin/sh
+# chkconfig: 2345 90 10
+# description: Start or stop the Shadowsocksr server
+#
+### BEGIN INIT INFO
+# Provides: Shadowsocksr
+# Required-Start: $network $syslog
+# Required-Stop: $network
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Description: Start or stop the Shadowsocksr server
+### END INIT INFO
+
+# Author: Teddysun <i@teddysun.com>
+
+name=shadowsocksr
+BIN=/opt/shadowsocksrss/shadowsocks/server.py
+conf=/etc/shadowsocksrss/config.json
+
+start(){
+    python $BIN -c $conf -d start -q
+    RETVAL=$?
+    if [ "$RETVAL" = "0" ]; then
+        echo "$name start success"
+    else
+        echo "$name start failed"
+    fi
+}
+
+stop(){
+    pid=`ps -ef | grep -v grep | grep -v ps | grep -i "${BIN}" | awk '{print $2}'`
+    if [ ! -z $pid ]; then
+        python $BIN -c $conf -d stop -q
+        RETVAL=$?
+        if [ "$RETVAL" = "0" ]; then
+            echo "$name stop success"
+        else
+            echo "$name stop failed"
+        fi
+    else
+        echo "$name is not running"
+        RETVAL=1
+    fi
+}
+
+status(){
+    pid=`ps -ef | grep -v grep | grep -v ps | grep -i "${BIN}" | awk '{print $2}'`
+    if [ -z $pid ]; then
+        echo "$name is not running"
+        tail -n 10 /var/log/shadowsocks.log
+        RETVAL=1
+    else
+        echo "$name is running with PID $pid"
+        cat /etc/shadowsocksrss/config.json | grep "protocol"
+        tail -n 10 /var/log/shadowsocks.log
+        RETVAL=0
+    fi
+}
+
+case "$1" in
+'start')
+    start
+    ;;
+'stop')
+    stop
+    ;;
+'status')
+    status
+    ;;
+'restart')
+    stop
+    start
+    RETVAL=$?
+    ;;
+*)
+    echo "Usage: $0 { start | stop | restart | status }"
+    RETVAL=1
+    ;;
+esac
+exit $RETVAL
+
